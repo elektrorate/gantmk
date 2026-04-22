@@ -716,6 +716,16 @@ legend {
   padding: 22px 18px;
 }
 
+.mobile-empty-state__actions {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.mobile-empty-state__actions .button {
+  width: 100%;
+}
+
 .empty-state,
 .panel {
   padding: 1.2rem;

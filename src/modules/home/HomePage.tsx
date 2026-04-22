@@ -5,7 +5,7 @@ import { CalendarModule } from "@/modules/calendar/CalendarModule";
 import { useCourseRealtime } from "@/hooks/useCourseRealtime";
 import { useCoursesRealtime } from "@/hooks/useCoursesRealtime";
 import { useAuth } from "@/hooks/useAuth";
-import { getDemoCoursesSnapshot } from "@/services/firebase/adapter";
+import { getDemoCoursesSnapshot, seedDemoDataToFirebase } from "@/services/firebase/adapter";
 import { isFirebaseConfigured } from "@/services/firebase/config";
 import { useAppStore } from "@/store/AppStore";
 import { buildBudgetWeekItems, buildStudentWeekItems, getBudgetMetrics, getCoursePeriodLabel, getStudentMetrics } from "@/utils/course";
@@ -39,6 +39,8 @@ export function HomePage() {
   const { courses, error: coursesError } = useCoursesRealtime();
   const { user, signOutSession } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [seedStatus, setSeedStatus] = useState<string | null>(null);
+  const [isSeedingDemo, setIsSeedingDemo] = useState(false);
   const demoCourses = useMemo(() => getDemoCoursesSnapshot(), []);
 
   const firstName = useMemo(() => user?.name?.split(" ")[0] ?? "Oliver", [user?.name]);
@@ -62,7 +64,24 @@ export function HomePage() {
     );
   }, [availableCourses]);
 
+  async function handleLoadDemoContent() {
+    setIsSeedingDemo(true);
+    setSeedStatus(null);
+
+    try {
+      await seedDemoDataToFirebase();
+      setActiveCourseId(demoCourses[0]?.id ?? null);
+      setSeedStatus("Contenido demo cargado.");
+    } catch (cause) {
+      setSeedStatus(cause instanceof Error ? cause.message : "No fue posible cargar el contenido demo.");
+    } finally {
+      setIsSeedingDemo(false);
+    }
+  }
+
   if (!displayCourse) {
+    const showDemoLoader = courses.length === 0 && isFirebaseConfigured && !shouldUseDemo;
+
     return (
       <section className="mobile-home">
         <div className="mobile-empty-state">
@@ -72,6 +91,15 @@ export function HomePage() {
               ? "Crea un curso nuevo para activar el sistema y comenzar el seguimiento."
               : "La maqueta principal se mostrara cuando elijas un curso activo."}
           </p>
+
+          {showDemoLoader ? (
+            <div className="mobile-empty-state__actions">
+              <button className="button" disabled={isSeedingDemo} onClick={() => void handleLoadDemoContent()} type="button">
+                {isSeedingDemo ? "Cargando..." : "Cargar contenido demo"}
+              </button>
+              {seedStatus ? <span className="status-pill">{seedStatus}</span> : null}
+            </div>
+          ) : null}
         </div>
       </section>
     );
