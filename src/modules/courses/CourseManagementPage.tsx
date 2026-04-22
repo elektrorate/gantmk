@@ -3,14 +3,16 @@ import { CourseForm } from "@/modules/courses/CourseForm";
 import { UsersModule } from "@/modules/users/UsersModule";
 import { useCoursesRealtime } from "@/hooks/useCoursesRealtime";
 import { useAuth } from "@/hooks/useAuth";
+import { DEMO_READ_ONLY_MESSAGE, deleteCourseRecord } from "@/services/firebase/adapter";
+import { isFirebaseConfigured } from "@/services/firebase/config";
 import { useAppStore } from "@/store/AppStore";
-import { deleteCourseRecord } from "@/services/firebase/adapter";
 
 export function CourseManagementPage() {
   const { courses } = useCoursesRealtime();
   const { activeCourseId, setActiveCourseId } = useAppStore();
   const { user } = useAuth();
   const activeCourse = useMemo(() => courses.find((course) => course.id === activeCourseId), [activeCourseId, courses]);
+  const isReadOnly = !isFirebaseConfigured;
 
   return (
     <section className="page-grid">
@@ -20,8 +22,9 @@ export function CourseManagementPage() {
         <div className="panel-header">
           <div>
             <p className="eyebrow">Eliminar curso</p>
-            <h3>Gestión de cursos</h3>
+            <h3>Gestion de cursos</h3>
           </div>
+          {isReadOnly ? <span className="status-pill">{DEMO_READ_ONLY_MESSAGE}</span> : null}
         </div>
         <div className="course-list">
           {courses.map((course) => (
@@ -30,7 +33,7 @@ export function CourseManagementPage() {
                 <strong>{course.nombreCurso}</strong>
                 <span>{course.presupuestoTotal} €</span>
               </button>
-              <button className="button button-danger" onClick={() => void deleteCourseRecord(course.id)}>
+              <button className="button button-danger" disabled={isReadOnly} onClick={() => void deleteCourseRecord(course.id)}>
                 Eliminar
               </button>
             </div>

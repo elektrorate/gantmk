@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
-import { addMonths, format, getYear, isSameMonth, subMonths } from "date-fns";
+import { addMonths, format, isSameMonth, subMonths } from "date-fns";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
+import { DEMO_READ_ONLY_MESSAGE, upsertCalendarEventRecord } from "@/services/firebase/adapter";
+import { isFirebaseConfigured } from "@/services/firebase/config";
 import type { Course } from "@/types";
 import { buildMonthGrid, findEventForDate, formatCalendarTitle, toIsoDate } from "@/utils/calendar";
-
-const FALLBACK_ACTIVITY_DAYS = [3, 4, 12, 25];
 
 function ChevronLeftIcon() {
   return (
@@ -25,8 +25,12 @@ function ChevronRightIcon() {
 export function CalendarModule({ course }: { course: Course }) {
   const [referenceDate, setReferenceDate] = useState(new Date(2026, 1, 1));
   const [selectedDate, setSelectedDate] = useState(new Date(2026, 1, 19));
-  const { events } = useCalendarEvents(course.id);
+  const [status, setStatus] = useState<string | null>(null);
+  const { events, error } = useCalendarEvents(course.id);
   const monthDays = useMemo(() => buildMonthGrid(referenceDate), [referenceDate]);
+  const selectedEvent = useMemo(() => findEventForDate(events, selectedDate), [events, selectedDate]);
+  const selectedDateIso = toIsoDate(selectedDate);
+  const isReadOnly = !isFirebaseConfigured;
 
   return (
     <article className="mobile-calendar">
@@ -50,8 +54,7 @@ export function CalendarModule({ course }: { course: Course }) {
         {monthDays.map((day) => {
           const event = findEventForDate(events, day);
           const isSelected = toIsoDate(day) === toIsoDate(selectedDate);
-          const useFallbackActivity = isSameMonth(day, referenceDate) && getYear(referenceDate) === 2026 && referenceDate.getMonth() === 1;
-          const hasActivity = Boolean(event) || (useFallbackActivity && FALLBACK_ACTIVITY_DAYS.includes(day.getDate()));
+          const hasActivity = Boolean(event);
 
           return (
             <button
@@ -67,6 +70,49 @@ export function CalendarModule({ course }: { course: Course }) {
           );
         })}
       </div>
+
+      <form
+        key={selectedDateIso}
+        className="mobile-calendar__editor"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (isReadOnly) {
+            setStatus(DEMO_READ_ONLY_MESSAGE);
+            return;
+          }
+
+          const formData = new FormData(event.currentTarget);
+
+          void upsertCalendarEventRecord({
+            courseId: course.id,
+            date: selectedDateIso,
+            consultas: Number(formData.get("consultas") ?? 0),
+            alumnosCerrados: Number(formData.get("alumnosCerrados") ?? 0),
+          })
+            .then(() => setStatus("Actividad guardada"))
+            .catch((cause) => setStatus(cause instanceof Error ? cause.message : "No fue posible guardar la actividad."));
+        }}
+      >
+        <div className="mobile-calendar__editor-header">
+          <strong>{format(selectedDate, "dd/MM/yyyy")}</strong>
+          <span>{status ?? (error ? "Modo fallback / reactivo" : isReadOnly ? DEMO_READ_ONLY_MESSAGE : "Actividad diaria")}</span>
+        </div>
+
+        <div className="mobile-calendar__editor-grid">
+          <label>
+            Consultas
+            <input defaultValue={selectedEvent?.consultas ?? 0} disabled={isReadOnly} min={0} name="consultas" type="number" />
+          </label>
+          <label>
+            Alumnos cerrados
+            <input defaultValue={selectedEvent?.alumnosCerrados ?? 0} disabled={isReadOnly} min={0} name="alumnosCerrados" type="number" />
+          </label>
+        </div>
+
+        <button className="button mobile-calendar__save" disabled={isReadOnly} type="submit">
+          {isReadOnly ? "Solo lectura" : "Guardar actividad"}
+        </button>
+      </form>
     </article>
   );
 }

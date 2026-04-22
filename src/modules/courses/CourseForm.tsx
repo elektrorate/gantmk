@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { createCourseRecord, updateCourseRecord } from "@/services/firebase/adapter";
+import { DEMO_READ_ONLY_MESSAGE, createCourseRecord, updateCourseRecord } from "@/services/firebase/adapter";
+import { isFirebaseConfigured } from "@/services/firebase/config";
 import { toCourseFormValues } from "@/utils/course";
 import type { Course, CourseInput, SessionUser } from "@/types";
 
@@ -18,8 +19,14 @@ export function CourseForm({
 }) {
   const initialValues = toCourseFormValues(course);
   const [status, setStatus] = useState<string | null>(null);
+  const isReadOnly = !isFirebaseConfigured;
 
   async function handleSubmit(formData: FormData) {
+    if (isReadOnly) {
+      setStatus(DEMO_READ_ONLY_MESSAGE);
+      return;
+    }
+
     const payload: CourseInput = {
       nombreCurso: String(formData.get("nombreCurso") ?? ""),
       fechaInicio: String(formData.get("fechaInicio") ?? ""),
@@ -33,15 +40,19 @@ export function CourseForm({
       createdBy: course?.createdBy ?? currentUser?.id ?? "anonymous",
     };
 
-    if (course) {
-      await updateCourseRecord(course.id, payload);
-      setStatus("Curso actualizado");
-    } else {
-      await createCourseRecord(payload);
-      setStatus("Curso creado");
-    }
+    try {
+      if (course) {
+        await updateCourseRecord(course.id, payload);
+        setStatus("Curso actualizado");
+      } else {
+        await createCourseRecord(payload);
+        setStatus("Curso creado");
+      }
 
-    onSaved?.();
+      onSaved?.();
+    } catch (cause) {
+      setStatus(cause instanceof Error ? cause.message : "No fue posible guardar el curso.");
+    }
   }
 
   return (
@@ -62,28 +73,28 @@ export function CourseForm({
 
       <label>
         Nombre del curso
-        <input defaultValue={initialValues.nombreCurso} name="nombreCurso" required />
+        <input defaultValue={initialValues.nombreCurso} disabled={isReadOnly} name="nombreCurso" required />
       </label>
 
       <div className="grid-two">
         <label>
           Fecha inicio
-          <input defaultValue={initialValues.fechaInicio} name="fechaInicio" required type="date" />
+          <input defaultValue={initialValues.fechaInicio} disabled={isReadOnly} name="fechaInicio" required type="date" />
         </label>
         <label>
           Fecha fin
-          <input defaultValue={initialValues.fechaFin} name="fechaFin" required type="date" />
+          <input defaultValue={initialValues.fechaFin} disabled={isReadOnly} name="fechaFin" required type="date" />
         </label>
       </div>
 
       <div className="grid-two">
         <label>
           Objetivo total alumnos
-          <input defaultValue={initialValues.objetivoTotalAlumnos} min={0} name="objetivoTotalAlumnos" required type="number" />
+          <input defaultValue={initialValues.objetivoTotalAlumnos} disabled={isReadOnly} min={0} name="objetivoTotalAlumnos" required type="number" />
         </label>
         <label>
           Presupuesto total
-          <input defaultValue={initialValues.presupuestoTotal} min={0} name="presupuestoTotal" required type="number" />
+          <input defaultValue={initialValues.presupuestoTotal} disabled={isReadOnly} min={0} name="presupuestoTotal" required type="number" />
         </label>
       </div>
 
@@ -91,31 +102,31 @@ export function CourseForm({
         <fieldset>
           <legend>Objetivo semanal</legend>
           {initialValues.objetivoSemanal.map((value, index) => (
-            <input key={`objetivo-${index}`} defaultValue={value} min={0} name={`objetivoSemanal${index}`} type="number" />
+            <input key={`objetivo-${index}`} defaultValue={value} disabled={isReadOnly} min={0} name={`objetivoSemanal${index}`} type="number" />
           ))}
         </fieldset>
         <fieldset>
           <legend>Presupuesto semanal</legend>
           {initialValues.presupuestoSemanal.map((value, index) => (
-            <input key={`presupuesto-${index}`} defaultValue={value} min={0} name={`presupuestoSemanal${index}`} type="number" />
+            <input key={`presupuesto-${index}`} defaultValue={value} disabled={isReadOnly} min={0} name={`presupuestoSemanal${index}`} type="number" />
           ))}
         </fieldset>
         <fieldset>
           <legend>Alumnos reales</legend>
           {initialValues.alumnosRealesSemanal.map((value, index) => (
-            <input key={`alumnos-${index}`} defaultValue={value} min={0} name={`alumnosRealesSemanal${index}`} type="number" />
+            <input key={`alumnos-${index}`} defaultValue={value} disabled={isReadOnly} min={0} name={`alumnosRealesSemanal${index}`} type="number" />
           ))}
         </fieldset>
         <fieldset>
           <legend>Gasto real</legend>
           {initialValues.gastoRealSemanal.map((value, index) => (
-            <input key={`gasto-${index}`} defaultValue={value} min={0} name={`gastoRealSemanal${index}`} type="number" />
+            <input key={`gasto-${index}`} defaultValue={value} disabled={isReadOnly} min={0} name={`gastoRealSemanal${index}`} type="number" />
           ))}
         </fieldset>
       </div>
 
-      <button className="button" type="submit">
-        {course ? "Guardar cambios" : "Crear curso"}
+      <button className="button" disabled={isReadOnly} type="submit">
+        {isReadOnly ? "Solo lectura" : course ? "Guardar cambios" : "Crear curso"}
       </button>
     </form>
   );

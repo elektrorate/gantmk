@@ -8,3 +8,5 @@ node-out.log
 ps-http-err.log
 ps-http-out.log
 server.log
+
+.vercel

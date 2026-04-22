@@ -5,9 +5,10 @@ import { CalendarModule } from "@/modules/calendar/CalendarModule";
 import { useCourseRealtime } from "@/hooks/useCourseRealtime";
 import { useCoursesRealtime } from "@/hooks/useCoursesRealtime";
 import { useAuth } from "@/hooks/useAuth";
+import { getDemoCoursesSnapshot } from "@/services/firebase/adapter";
+import { isFirebaseConfigured } from "@/services/firebase/config";
 import { useAppStore } from "@/store/AppStore";
-import { buildBudgetWeekItems, buildStudentWeekItems, calculateStudentProgress, getCoursePeriodLabel } from "@/utils/course";
-import type { Course } from "@/types";
+import { buildBudgetWeekItems, buildStudentWeekItems, getBudgetMetrics, getCoursePeriodLabel, getStudentMetrics } from "@/utils/course";
 
 const navigationItems = [
   { label: "Home", to: "/home" },
@@ -16,99 +17,6 @@ const navigationItems = [
   { label: "Reportes", to: "/reports" },
   { label: "Mensajes", to: "/messages" },
 ] as const;
-
-const demoCourses: Course[] = [
-  {
-    id: "course-modelado-iniciacion",
-    nombreCurso: "Curso de Iniciacion de Modelado",
-    fechaInicio: "2026-04-03",
-    fechaFin: "2026-05-03",
-    objetivoTotalAlumnos: 64,
-    objetivoSemanal: [16, 16, 16, 16],
-    presupuestoTotal: 300,
-    presupuestoSemanal: [75, 75, 75, 75],
-    alumnosRealesSemanal: [14, 14, 14, 0],
-    gastoRealSemanal: [18, 28, 128, 0],
-    createdAt: "2026-04-01T00:00:00.000Z",
-    updatedAt: "2026-04-01T00:00:00.000Z",
-    createdBy: "demo",
-  },
-  {
-    id: "course-ceramica-iniciacion",
-    nombreCurso: "Curso de Iniciacion de Ceramica",
-    fechaInicio: "2026-04-03",
-    fechaFin: "2026-05-03",
-    objetivoTotalAlumnos: 48,
-    objetivoSemanal: [12, 12, 12, 12],
-    presupuestoTotal: 240,
-    presupuestoSemanal: [60, 60, 60, 60],
-    alumnosRealesSemanal: [10, 11, 9, 0],
-    gastoRealSemanal: [14, 26, 96, 0],
-    createdAt: "2026-04-01T00:00:00.000Z",
-    updatedAt: "2026-04-01T00:00:00.000Z",
-    createdBy: "demo",
-  },
-  {
-    id: "course-torno-iniciacion",
-    nombreCurso: "Curso de Iniciacion al Torno",
-    fechaInicio: "2026-04-03",
-    fechaFin: "2026-05-03",
-    objetivoTotalAlumnos: 52,
-    objetivoSemanal: [13, 13, 13, 13],
-    presupuestoTotal: 280,
-    presupuestoSemanal: [70, 70, 70, 70],
-    alumnosRealesSemanal: [11, 12, 10, 0],
-    gastoRealSemanal: [16, 24, 104, 0],
-    createdAt: "2026-04-01T00:00:00.000Z",
-    updatedAt: "2026-04-01T00:00:00.000Z",
-    createdBy: "demo",
-  },
-  {
-    id: "course-modelado-especializacion",
-    nombreCurso: "Especializacion en Modelado Editorial",
-    fechaInicio: "2026-04-03",
-    fechaFin: "2026-05-03",
-    objetivoTotalAlumnos: 36,
-    objetivoSemanal: [9, 9, 9, 9],
-    presupuestoTotal: 340,
-    presupuestoSemanal: [85, 85, 85, 85],
-    alumnosRealesSemanal: [8, 7, 9, 0],
-    gastoRealSemanal: [20, 34, 120, 0],
-    createdAt: "2026-04-01T00:00:00.000Z",
-    updatedAt: "2026-04-01T00:00:00.000Z",
-    createdBy: "demo",
-  },
-  {
-    id: "course-escultura-especializacion",
-    nombreCurso: "Especializacion en Escultura Ceramica",
-    fechaInicio: "2026-04-03",
-    fechaFin: "2026-05-03",
-    objetivoTotalAlumnos: 32,
-    objetivoSemanal: [8, 8, 8, 8],
-    presupuestoTotal: 320,
-    presupuestoSemanal: [80, 80, 80, 80],
-    alumnosRealesSemanal: [7, 7, 8, 0],
-    gastoRealSemanal: [19, 31, 116, 0],
-    createdAt: "2026-04-01T00:00:00.000Z",
-    updatedAt: "2026-04-01T00:00:00.000Z",
-    createdBy: "demo",
-  },
-  {
-    id: "course-esmaltes-especializacion",
-    nombreCurso: "Especializacion en Esmaltes y Acabados",
-    fechaInicio: "2026-04-03",
-    fechaFin: "2026-05-03",
-    objetivoTotalAlumnos: 28,
-    objetivoSemanal: [7, 7, 7, 7],
-    presupuestoTotal: 260,
-    presupuestoSemanal: [65, 65, 65, 65],
-    alumnosRealesSemanal: [6, 7, 6, 0],
-    gastoRealSemanal: [15, 22, 92, 0],
-    createdAt: "2026-04-01T00:00:00.000Z",
-    updatedAt: "2026-04-01T00:00:00.000Z",
-    createdBy: "demo",
-  },
-];
 
 function getCourseCategory(courseName: string) {
   return courseName.toLowerCase().includes("especializacion") ? "Especializacion" : "Iniciacion";
@@ -127,15 +35,21 @@ function BellIcon() {
 
 export function HomePage() {
   const { activeCourseId, setActiveCourseId } = useAppStore();
-  const { course } = useCourseRealtime(activeCourseId);
-  const { courses } = useCoursesRealtime();
+  const { course, error: activeCourseError } = useCourseRealtime(activeCourseId);
+  const { courses, error: coursesError } = useCoursesRealtime();
   const { user, signOutSession } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const demoCourses = useMemo(() => getDemoCoursesSnapshot(), []);
 
   const firstName = useMemo(() => user?.name?.split(" ")[0] ?? "Oliver", [user?.name]);
   const avatarLabel = useMemo(() => firstName.slice(0, 2).toUpperCase(), [firstName]);
-  const availableCourses = courses.length > 0 ? courses : demoCourses;
-  const displayCourse = course ?? availableCourses.find((item) => item.id === activeCourseId) ?? availableCourses[0] ?? null;
+  const shouldUseDemo = !isFirebaseConfigured || Boolean(coursesError) || Boolean(activeCourseError);
+  const availableCourses = shouldUseDemo ? demoCourses : courses;
+  const displayCourse = shouldUseDemo
+    ? availableCourses.find((item) => item.id === activeCourseId) ?? availableCourses[0] ?? null
+    : course ?? availableCourses.find((item) => item.id === activeCourseId) ?? availableCourses[0] ?? null;
+  const studentMetrics = useMemo(() => (displayCourse ? getStudentMetrics(displayCourse) : null), [displayCourse]);
+  const budgetMetrics = useMemo(() => (displayCourse ? getBudgetMetrics(displayCourse) : null), [displayCourse]);
 
   const coursesByCategory = useMemo(() => {
     return availableCourses.reduce<Record<string, typeof availableCourses>>(
@@ -152,15 +66,17 @@ export function HomePage() {
     return (
       <section className="mobile-home">
         <div className="mobile-empty-state">
-          <h2>Selecciona un curso</h2>
-          <p>La maqueta principal se mostrara cuando elijas un curso activo.</p>
+          <h2>{courses.length === 0 && !shouldUseDemo ? "No hay cursos creados" : "Selecciona un curso"}</h2>
+          <p>
+            {courses.length === 0 && !shouldUseDemo
+              ? "Crea un curso nuevo para activar el sistema y comenzar el seguimiento."
+              : "La maqueta principal se mostrara cuando elijas un curso activo."}
+          </p>
         </div>
       </section>
     );
   }
 
-  const progressStudents = calculateStudentProgress(displayCourse) > 0 ? "90%" : "0%";
-  const remainingStudents = calculateStudentProgress(displayCourse) > 0 ? "6%" : "0%";
   const periodLabel = getCoursePeriodLabel(displayCourse);
 
   return (
@@ -253,8 +169,8 @@ export function HomePage() {
           highlightValue=""
           periodLabel=""
           weeks={buildStudentWeekItems(displayCourse)}
-          leftMetric={{ value: progressStudents, label: "Project completion rate" }}
-          rightMetric={{ value: remainingStudents, label: "Remaining tasks" }}
+          leftMetric={studentMetrics?.[0] ?? { value: "0%", label: "Progreso de alumnos" }}
+          rightMetric={studentMetrics?.[1] ?? { value: "0", label: "Alumnos restantes" }}
           variant="students"
         />
 
@@ -267,8 +183,8 @@ export function HomePage() {
             highlightValue=""
             periodLabel=""
             weeks={buildBudgetWeekItems(displayCourse)}
-            leftMetric={{ value: "", label: "" }}
-            rightMetric={{ value: "", label: "" }}
+            leftMetric={budgetMetrics?.[0] ?? { value: "0%", label: "Progreso gasto" }}
+            rightMetric={budgetMetrics?.[1] ?? { value: "0 €", label: "Presupuesto restante" }}
             variant="budget"
           />
         </section>

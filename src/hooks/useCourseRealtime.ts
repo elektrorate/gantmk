@@ -15,6 +15,7 @@ export function useCourseRealtime(courseId: string | null) {
     }
 
     setLoading(true);
+    setError(null);
 
     try {
       const unsubscribe = subscribeToCourse(courseId, (nextCourse) => {

@@ -613,6 +613,49 @@ legend {
   box-shadow: 0 6px 16px rgba(255, 90, 0, 0.4);
 }
 
+.mobile-calendar__editor {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(28, 28, 28, 0.08);
+}
+
+.mobile-calendar__editor-header {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.mobile-calendar__editor-header strong {
+  font-size: 0.95rem;
+}
+
+.mobile-calendar__editor-header span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.mobile-calendar__editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.mobile-calendar__editor label {
+  gap: 0.35rem;
+  color: var(--text-main);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.mobile-calendar__editor input {
+  padding: 0.8rem 0.85rem;
+}
+
+.mobile-calendar__save {
+  width: 100%;
+}
+
 .mobile-bottom-nav {
   position: fixed;
   left: 50%;

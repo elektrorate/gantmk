@@ -1,5 +1,5 @@
 import { differenceInCalendarDays, format, isAfter, isBefore, parseISO } from "date-fns";
-import type { Course, MetricItem, ReportRow, WeekItem, WeekStatus } from "@/types";
+import type { Course, CourseCalendarEvent, MetricItem, ReportRow, WeekItem, WeekStatus } from "@/types";
 
 const WEEK_LABELS = ["1 sem.", "2 sem.", "3 sem.", "4 sem."] as const;
 
@@ -112,35 +112,93 @@ export function getBudgetMetrics(course: Course): [MetricItem, MetricItem] {
   ];
 }
 
-export function buildReportRows(course: Course): ReportRow[] {
+export function getWeekIndexForDate(course: Course, date: string) {
+  const start = parseISO(course.fechaInicio);
+  const end = parseISO(course.fechaFin);
+  const current = parseISO(date);
+
+  if (isBefore(current, start)) {
+    return 0;
+  }
+
+  if (isAfter(current, end)) {
+    return 3;
+  }
+
+  const totalDays = Math.max(differenceInCalendarDays(end, start) + 1, 1);
+  const elapsedDays = Math.max(differenceInCalendarDays(current, start), 0);
+  const progress = elapsedDays / totalDays;
+
+  return Math.min(3, Math.floor(progress * 4));
+}
+
+export function groupCalendarEventsByWeek(course: Course, events: CourseCalendarEvent[]) {
+  return events.reduce(
+    (accumulator, event) => {
+      const weekIndex = getWeekIndexForDate(course, event.date);
+      const bucket = accumulator[weekIndex];
+
+      if (!bucket) {
+        return accumulator;
+      }
+
+      bucket.consultas += event.consultas;
+      bucket.alumnosCerrados += event.alumnosCerrados;
+      return accumulator;
+    },
+    [
+      { consultas: 0, alumnosCerrados: 0 },
+      { consultas: 0, alumnosCerrados: 0 },
+      { consultas: 0, alumnosCerrados: 0 },
+      { consultas: 0, alumnosCerrados: 0 },
+    ],
+  );
+}
+
+export function buildReportRows(course: Course, events: CourseCalendarEvent[] = []): ReportRow[] {
+  const weeklyEvents = groupCalendarEventsByWeek(course, events);
+
   return course.objetivoSemanal.map((objetivo, index) => {
     const real = course.alumnosRealesSemanal[index] ?? 0;
+    const presupuesto = course.presupuestoSemanal[index] ?? 0;
     const gasto = course.gastoRealSemanal[index] ?? 0;
+    const consultas = weeklyEvents[index]?.consultas ?? 0;
+    const alumnosCerrados = weeklyEvents[index]?.alumnosCerrados ?? 0;
 
     return {
       semana: `Semana ${index + 1}`,
       objetivo,
       real,
+      presupuesto,
       gasto,
-      conversiones: real,
-      roi: gasto > 0 ? Number((real / gasto).toFixed(2)) : 0,
+      consultas,
+      alumnosCerrados,
+      conversiones: alumnosCerrados,
+      roi: gasto > 0 ? Number((alumnosCerrados / gasto).toFixed(2)) : 0,
+      costePorAlumno: alumnosCerrados > 0 ? Number((gasto / alumnosCerrados).toFixed(2)) : 0,
+      tasaConversion: consultas > 0 ? Number((alumnosCerrados / consultas).toFixed(2)) : 0,
     };
   });
 }
 
-export function getTotalsRow(course: Course): ReportRow {
-  const rows = buildReportRows(course);
+export function getTotalsRow(course: Course, events: CourseCalendarEvent[] = []): ReportRow {
+  const rows = buildReportRows(course, events);
+  const totalGasto = sumNumbers(course.gastoRealSemanal);
+  const totalConsultas = rows.reduce((total, row) => total + row.consultas, 0);
+  const totalAlumnosCerrados = rows.reduce((total, row) => total + row.alumnosCerrados, 0);
 
   return {
     semana: "Total",
     objetivo: sumNumbers(course.objetivoSemanal),
     real: sumNumbers(course.alumnosRealesSemanal),
-    gasto: sumNumbers(course.gastoRealSemanal),
-    conversiones: rows.reduce((total, row) => total + row.conversiones, 0),
-    roi:
-      sumNumbers(course.gastoRealSemanal) > 0
-        ? Number((sumNumbers(course.alumnosRealesSemanal) / sumNumbers(course.gastoRealSemanal)).toFixed(2))
-        : 0,
+    presupuesto: sumNumbers(course.presupuestoSemanal),
+    gasto: totalGasto,
+    consultas: totalConsultas,
+    alumnosCerrados: totalAlumnosCerrados,
+    conversiones: totalAlumnosCerrados,
+    roi: totalGasto > 0 ? Number((totalAlumnosCerrados / totalGasto).toFixed(2)) : 0,
+    costePorAlumno: totalAlumnosCerrados > 0 ? Number((totalGasto / totalAlumnosCerrados).toFixed(2)) : 0,
+    tasaConversion: totalConsultas > 0 ? Number((totalAlumnosCerrados / totalConsultas).toFixed(2)) : 0,
   };
 }
 

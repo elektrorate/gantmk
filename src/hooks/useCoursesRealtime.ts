@@ -8,6 +8,8 @@ export function useCoursesRealtime() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setError(null);
+
     try {
       const unsubscribe = subscribeToCourses((nextCourses) => {
         setCourses(nextCourses);

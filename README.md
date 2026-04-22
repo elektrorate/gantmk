@@ -51,3 +51,13 @@ En Vercel:
 
 - `npm run lint`
 - `npm run build`
+
+## Documentacion interna
+
+Para guardar contexto funcional de la app, usa la carpeta `docs/`.
+
+- `docs/README.md`: indice de documentacion
+- `docs/app-overview.md`: vision general de la app
+- `docs/architecture.md`: estructura tecnica y modulos
+- `docs/data-model.md`: entidades y datos principales
+- `docs/deployment.md`: pasos de despliegue y entorno

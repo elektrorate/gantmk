@@ -83,9 +83,14 @@ export type ReportRow = {
   semana: string;
   objetivo: number;
   real: number;
+  presupuesto: number;
   gasto: number;
+  consultas: number;
+  alumnosCerrados: number;
   conversiones: number;
   roi: number;
+  costePorAlumno: number;
+  tasaConversion: number;
 };
 
 export type CourseInput = Omit<Course, "id" | "createdAt" | "updatedAt">;

@@ -15,6 +15,7 @@ export function useCalendarEvents(courseId: string | null) {
     }
 
     setLoading(true);
+    setError(null);
 
     try {
       const unsubscribe = subscribeToCalendarEvents(courseId, (nextEvents) => {

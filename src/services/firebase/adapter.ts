@@ -9,6 +9,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -30,6 +31,8 @@ import type {
   SessionUser,
   UserInput,
 } from "@/types";
+
+export const DEMO_READ_ONLY_MESSAGE = "Modo demo activo: la aplicacion es solo lectura hasta configurar Firebase.";
 
 function getConfiguredAuth() {
   if (!auth) {
@@ -57,10 +60,6 @@ function getConfiguredApp() {
 
 function isoNow() {
   return formatISO(new Date());
-}
-
-function randomId(prefix: string) {
-  return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 const demoUsers: AppUser[] = [
@@ -236,23 +235,10 @@ const eventListeners = new Set<(events: CourseCalendarEvent[]) => void>();
 const noteListeners = new Set<(notes: InternalNote[]) => void>();
 const authListeners = new Set<(user: SessionUser | null) => void>();
 
-function emitUsers() {
-  const data = [...demoUsers].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  userListeners.forEach((listener) => listener(data));
-}
-
-function emitCourses() {
-  const data = [...demoCourses].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  courseListeners.forEach((listener) => listener(data));
-}
-
-function emitEvents() {
-  eventListeners.forEach((listener) => listener([...demoEvents]));
-}
-
-function emitNotes() {
-  const data = [...demoNotes].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  noteListeners.forEach((listener) => listener(data));
+function assertWritableDataSource() {
+  if (!isFirebaseConfigured) {
+    throw new Error(DEMO_READ_ONLY_MESSAGE);
+  }
 }
 
 function emitAuth() {
@@ -335,43 +321,30 @@ export function subscribeToUsers(callback: (users: AppUser[]) => void) {
 }
 
 export async function createUserRecord(input: UserInput & { password?: string }) {
-  const configuredDb = isFirebaseConfigured ? getConfiguredDb() : null;
-  const id = configuredDb ? doc(collection(configuredDb, "users")).id : randomId("user");
+  assertWritableDataSource();
+  const configuredDb = getConfiguredDb();
+  const id = doc(collection(configuredDb, "users")).id;
   const createdAt = isoNow();
   const userRecord: AppUser = { id, name: input.name, email: input.email, role: input.role, createdAt };
 
-  if (configuredDb) {
-    if (input.password) {
-      const secondaryConfig = getConfiguredApp().options;
-      const { deleteApp, initializeApp: initSecondary, getApps: getSecondaryApps } = await import("firebase/app");
-      const secondaryApp =
-        getSecondaryApps().find((app) => app.name === "secondary-user-provisioning") ??
-        initSecondary(secondaryConfig, "secondary-user-provisioning");
-      const { getAuth: getSecondaryAuth } = await import("firebase/auth");
-      const secondaryAuth = getSecondaryAuth(secondaryApp);
-      await createUserWithEmailAndPassword(secondaryAuth, input.email, input.password);
-      await deleteApp(secondaryApp);
-    }
-
-    await setDoc(doc(configuredDb, "users", id), userRecord);
-    return;
+  if (input.password) {
+    const secondaryConfig = getConfiguredApp().options;
+    const { deleteApp, initializeApp: initSecondary, getApps: getSecondaryApps } = await import("firebase/app");
+    const secondaryApp =
+      getSecondaryApps().find((app) => app.name === "secondary-user-provisioning") ??
+      initSecondary(secondaryConfig, "secondary-user-provisioning");
+    const { getAuth: getSecondaryAuth } = await import("firebase/auth");
+    const secondaryAuth = getSecondaryAuth(secondaryApp);
+    await createUserWithEmailAndPassword(secondaryAuth, input.email, input.password);
+    await deleteApp(secondaryApp);
   }
 
-  demoUsers.unshift(userRecord);
-  emitUsers();
+  await setDoc(doc(configuredDb, "users", id), userRecord);
 }
 
 export async function deleteUserRecord(userId: string) {
-  if (isFirebaseConfigured) {
-    await deleteDoc(doc(getConfiguredDb(), "users", userId));
-    return;
-  }
-
-  const index = demoUsers.findIndex((user) => user.id === userId);
-  if (index >= 0) {
-    demoUsers.splice(index, 1);
-    emitUsers();
-  }
+  assertWritableDataSource();
+  await deleteDoc(doc(getConfiguredDb(), "users", userId));
 }
 
 export function subscribeToCourses(callback: (courses: Course[]) => void) {
@@ -405,8 +378,9 @@ export function subscribeToCourse(courseId: string, callback: (course: Course | 
 }
 
 export async function createCourseRecord(input: CourseInput) {
-  const configuredDb = isFirebaseConfigured ? getConfiguredDb() : null;
-  const id = configuredDb ? doc(collection(configuredDb, "courses")).id : randomId("course");
+  assertWritableDataSource();
+  const configuredDb = getConfiguredDb();
+  const id = doc(collection(configuredDb, "courses")).id;
   const timestamp = isoNow();
   const course: Course = {
     ...input,
@@ -415,53 +389,21 @@ export async function createCourseRecord(input: CourseInput) {
     updatedAt: timestamp,
   };
 
-  if (configuredDb) {
-    await setDoc(doc(configuredDb, "courses", id), course);
-    return;
-  }
-
-  demoCourses.unshift(course);
-  emitCourses();
+  await setDoc(doc(configuredDb, "courses", id), course);
 }
 
 export async function updateCourseRecord(courseId: string, input: CourseInput) {
   const timestamp = isoNow();
-
-  if (isFirebaseConfigured) {
-    await updateDoc(doc(getConfiguredDb(), "courses", courseId), {
-      ...input,
-      updatedAt: timestamp,
-    });
-    return;
-  }
-
-  const index = demoCourses.findIndex((course) => course.id === courseId);
-  if (index >= 0) {
-    const currentCourse = demoCourses[index];
-    if (!currentCourse) {
-      return;
-    }
-
-    demoCourses[index] = {
-      ...currentCourse,
-      ...input,
-      updatedAt: timestamp,
-    };
-    emitCourses();
-  }
+  assertWritableDataSource();
+  await updateDoc(doc(getConfiguredDb(), "courses", courseId), {
+    ...input,
+    updatedAt: timestamp,
+  });
 }
 
 export async function deleteCourseRecord(courseId: string) {
-  if (isFirebaseConfigured) {
-    await deleteDoc(doc(getConfiguredDb(), "courses", courseId));
-    return;
-  }
-
-  const index = demoCourses.findIndex((course) => course.id === courseId);
-  if (index >= 0) {
-    demoCourses.splice(index, 1);
-    emitCourses();
-  }
+  assertWritableDataSource();
+  await deleteDoc(doc(getConfiguredDb(), "courses", courseId));
 }
 
 export function subscribeToCalendarEvents(courseId: string, callback: (events: CourseCalendarEvent[]) => void) {
@@ -483,40 +425,24 @@ export function subscribeToCalendarEvents(courseId: string, callback: (events: C
 }
 
 export async function upsertCalendarEventRecord(input: CalendarEventInput) {
+  assertWritableDataSource();
   const eventDocId = `${input.courseId}_${input.date}`;
-  const configuredDb = isFirebaseConfigured ? getConfiguredDb() : null;
-  const existingId = configuredDb ? eventDocId : randomId("event");
-  const existingDemoEvent = demoEvents.find((event) => event.courseId === input.courseId && event.date === input.date);
+  const configuredDb = getConfiguredDb();
   const timestamp = isoNow();
 
-  if (configuredDb) {
-    await setDoc(
-      doc(configuredDb, "courseCalendarEvents", eventDocId),
-      {
-        id: eventDocId,
-        ...input,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      },
-      { merge: true },
-    );
-    return;
-  }
+  const existingSnapshot = await getDoc(doc(configuredDb, "courseCalendarEvents", eventDocId));
+  const existingRecord = existingSnapshot.exists() ? (existingSnapshot.data() as CourseCalendarEvent) : null;
 
-  if (existingDemoEvent) {
-    existingDemoEvent.consultas = input.consultas;
-    existingDemoEvent.alumnosCerrados = input.alumnosCerrados;
-    existingDemoEvent.updatedAt = timestamp;
-  } else {
-    demoEvents.push({
-      id: existingId,
+  await setDoc(
+    doc(configuredDb, "courseCalendarEvents", eventDocId),
+    {
+      id: eventDocId,
       ...input,
-      createdAt: timestamp,
+      createdAt: existingRecord?.createdAt ?? timestamp,
       updatedAt: timestamp,
-    });
-  }
-
-  emitEvents();
+    },
+    { merge: true },
+  );
 }
 
 export function subscribeToInternalNotes(userId: string, callback: (notes: InternalNote[]) => void) {
@@ -564,8 +490,9 @@ export function subscribeToInternalNotes(userId: string, callback: (notes: Inter
 }
 
 export async function sendInternalNoteRecord(input: InternalNoteInput) {
-  const configuredDb = isFirebaseConfigured ? getConfiguredDb() : null;
-  const id = configuredDb ? doc(collection(configuredDb, "internalNotes")).id : randomId("note");
+  assertWritableDataSource();
+  const configuredDb = getConfiguredDb();
+  const id = doc(collection(configuredDb, "internalNotes")).id;
   const note: InternalNote = {
     id,
     ...input,
@@ -573,11 +500,37 @@ export async function sendInternalNoteRecord(input: InternalNoteInput) {
     read: false,
   };
 
-  if (configuredDb) {
-    await setDoc(doc(configuredDb, "internalNotes", id), note);
-    return;
+  await setDoc(doc(configuredDb, "internalNotes", id), note);
+}
+
+export function getDemoCoursesSnapshot() {
+  return [...demoCourses];
+}
+
+export async function seedDemoDataToFirebase() {
+  if (!isFirebaseConfigured) {
+    throw new Error("Cannot seed data: Firebase is not configured.");
   }
 
-  demoNotes.unshift(note);
-  emitNotes();
+  const configuredDb = getConfiguredDb();
+
+  // Seed Users
+  for (const user of demoUsers) {
+    await setDoc(doc(configuredDb, "users", user.id), user, { merge: true });
+  }
+
+  // Seed Courses
+  for (const course of demoCourses) {
+    await setDoc(doc(configuredDb, "courses", course.id), course, { merge: true });
+  }
+
+  // Seed Events
+  for (const event of demoEvents) {
+    await setDoc(doc(configuredDb, "courseCalendarEvents", event.id), event, { merge: true });
+  }
+
+  // Seed Notes
+  for (const note of demoNotes) {
+    await setDoc(doc(configuredDb, "internalNotes", note.id), note, { merge: true });
+  }
 }

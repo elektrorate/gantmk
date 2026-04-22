@@ -1,0 +1,300 @@
+CONFIGURACIÓN GENERAL
+Viewport: mobile (375px ancho base, estilo iPhone)
+Safe area: padding superior 16px
+Fondo general: color beige claro uniforme
+background-color: #EDE6DD;
+Tipografía: Inter (fallback: system-ui)
+Rendering: limpio, sin bordes duros, uso de sombras suaves
+HEADER SUPERIOR
+
+Layout
+Contenedor horizontal
+Padding: 16px horizontal
+Altura aprox: 56px
+Alineación: space-between
+
+Elementos
+
+IZQUIERDA
+Icono de notificaciones (campana)
+Tamaño: 24px
+
+Badge:
+Color: naranja
+Texto: “5”
+Tamaño: 16px círculo
+Posición: top-right del icono
+Offset: -4px, -4px
+
+DERECHA (GRUPO DE ACCIONES)
+Este bloque debe contener DOS elementos alineados horizontalmente:
+
+Avatar circular
+Tamaño: 40px
+Imagen centrada
+Menú de navegación (NUEVO ELEMENTO IMPORTANTE)
+Ubicación: extremo superior derecho de la pantalla, a la derecha del avatar
+Separación entre avatar y menú: 8px
+
+Tipo de menú:
+
+Icono tipo “hamburger” (3 líneas horizontales) o icono de menú minimal
+Tamaño: 22–24px
+Color: #1C1C1C
+
+Comportamiento:
+
+Debe ser clicable/tappable
+Abre un menú desplegable o drawer lateral desde la derecha
+
+Estilo del menú desplegable:
+
+Fondo blanco
+Border radius: 16px
+Sombra suave:
+box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+Padding interno: 16px
+Animación: slide desde derecha (translateX)
+
+Estructura interna del menú:
+
+Lista vertical de opciones
+Espaciado entre ítems: 12px
+Tipografía: 14px / peso 500
+Color texto: #1C1C1C
+SALUDO
+
+Texto:
+“Hi, Oliver!”
+
+Tipografía:
+Tamaño: 20px
+Peso: 600
+
+Color: negro suave
+color: #1C1C1C;
+
+Margen superior: 8px
+Margen horizontal: 16px
+
+SELECTOR “VER TODO”
+
+Tipo: dropdown
+Fondo: blanco
+Border radius: 8px
+Padding: 10px 12px
+
+Borde:
+border: 1px solid #E0D9CF;
+
+Texto: “Ver todo”
+Icono: flecha hacia abajo a la derecha
+
+Margen: 12px 16px
+
+BLOQUE: CURSO DE INICIACIÓN
+
+TÍTULO
+Texto: uppercase
+Tamaño: 12px
+Color: gris oscuro
+color: #6E6E6E;
+
+SUBTÍTULO OBJETIVO
+Texto: “OBJETIVO”
+Tamaño: 14px
+Peso: 600
+
+NÚMERO PRINCIPAL
+“64 ALUMNOS”
+Tamaño: 24px
+Peso: 700
+Color: naranja principal
+color: #FF8A00;
+
+TEXTO AUXILIAR
+Tamaño: 11px
+Color: gris
+
+BARRA DE PROGRESO SEMANAL (ALUMNOS)
+
+ESTRUCTURA
+Línea horizontal base
+4 puntos equidistantes (semanas)
+
+Línea:
+height: 2px;
+background: #000;
+opacity: 0.2;
+
+Puntos:
+Círculos negros
+Tamaño: 6px
+
+BLOQUES SEMANALES
+Altura: 36px
+Border radius: 20px
+Segmentados en 4 partes iguales
+
+SEMANAS ACTIVAS
+Color: naranja
+
+background: linear-gradient(90deg, #FF8A00 0%, #FFA500 100%);
+
+Texto:
+“14 alum.”
+Color: negro
+Tamaño: 12px
+Centrado
+
+SEMANA INACTIVA (4ta)
+Fondo: gris claro
+
+Overlay: patrón diagonal
+background: repeating-linear-gradient(
+45deg,
+#E5DED5,
+#E5DED5 6px,
+#F5EFE7 6px,
+#F5EFE7 12px
+);
+
+Texto: “00 alum.”
+
+MÉTRICAS DE PROGRESO
+
+IZQUIERDA
+“90%”
+Tamaño: 36px
+Peso: 700
+
+Label:
+“Project completion rate”
+Tamaño: 12px
+Color: gris
+
+DERECHA
+“6%”
+Tamaño: 16px
+Peso: 600
+
+Label:
+“Remaining tasks”
+
+BLOQUE GASTO EN PAUTA
+
+CONTENEDOR
+Fondo: beige más oscuro
+background: #E7D5BF;
+Padding: 16px
+
+TÍTULO
+“GASTO EN PAUTA 300 €”
+Color: naranja
+Tamaño: 16px
+Peso: 700
+
+BARRA SEMANAL
+
+Misma estructura que alumnos, pero:
+
+COLORES
+Semanas activas:
+background: #FFD400;
+
+Texto:
+negro
+“18 €”, “28 €”, “128 €”
+
+Última semana:
+“000 €”
+Mismo patrón diagonal
+
+CALENDARIO
+
+CONTENEDOR
+Fondo: blanco
+Border radius: 24px
+Padding: 16px
+
+Sombra suave:
+box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+
+HEADER CALENDARIO
+“February 2026”
+Tamaño: 16px
+Peso: 600
+
+Flechas izquierda/derecha (iconos)
+
+DÍAS DE LA SEMANA
+Tamaño: 11px
+Color: gris
+
+GRID DE DÍAS
+7 columnas
+Espaciado vertical: 12px
+
+DÍAS NORMALES
+Color: negro
+Tamaño: 14px
+
+DÍAS CON ACTIVIDAD
+Fondo: círculo con patrón diagonal
+Color base: naranja claro
+
+DÍA SELECCIONADO
+Fondo: naranja sólido
+background: #FF5A00;
+
+Texto blanco
+
+Sombra:
+box-shadow: 0 6px 16px rgba(255,90,0,0.4);
+
+Tamaño círculo: 40px
+
+NAVBAR INFERIOR
+
+CONTENEDOR
+Fondo: blanco
+Altura: 72px
+Border radius superior: 24px
+
+ICONOS
+5 iconos distribuidos horizontalmente
+
+ICONO ACTIVO
+Fondo: naranja
+Forma: círculo
+Tamaño: 56px
+Icono blanco
+
+ICONOS INACTIVOS
+Color: gris
+Tamaño: 24px
+
+ESPACIADO GLOBAL
+
+Margen horizontal general: 16px
+Separación entre bloques: 20px
+Separación interna: 8–12px
+
+ESTILO GENERAL
+
+Minimalista
+Sin bordes duros
+Uso de color como jerarquía
+Alto contraste en métricas clave
+UI tipo app financiera/productividad
+
+INTERACCIONES
+
+Hover (desktop):
+ligera elevación
+
+Tap:
+escala 0.98
+
+Transiciones:
+transition: all 0.2s ease;

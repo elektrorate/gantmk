@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { useCourseRealtime } from "@/hooks/useCourseRealtime";
 import { useAppStore } from "@/store/AppStore";
 import { exportCourseReport } from "@/utils/export";
@@ -51,7 +52,8 @@ function MaterialIcon({ type }: { type: (typeof downloadMaterials)[number]["id"]
 export function ReportsPage() {
   const { activeCourseId } = useAppStore();
   const { course } = useCourseRealtime(activeCourseId);
-  const rows = useMemo(() => (course ? [...buildReportRows(course), getTotalsRow(course)] : []), [course]);
+  const { events } = useCalendarEvents(activeCourseId);
+  const rows = useMemo(() => (course ? [...buildReportRows(course, events), getTotalsRow(course, events)] : []), [course, events]);
 
   return (
     <section className="page-stack">
@@ -62,7 +64,7 @@ export function ReportsPage() {
             <h2>Exportacion a Excel</h2>
           </div>
 
-          <button className="button reports-panel__export" disabled={!course} onClick={() => course && exportCourseReport(course)}>
+          <button className="button reports-panel__export" disabled={!course} onClick={() => course && exportCourseReport(course, events)}>
             Exportar .xlsx
           </button>
         </div>
@@ -73,7 +75,7 @@ export function ReportsPage() {
               key={material.id}
               className={material.tone ? `reports-material-card ${material.tone}` : "reports-material-card"}
               disabled={material.id !== "excel" || !course}
-              onClick={() => material.id === "excel" && course && exportCourseReport(course)}
+              onClick={() => material.id === "excel" && course && exportCourseReport(course, events)}
               type="button"
             >
               <span className="reports-material-card__icon">
@@ -92,9 +94,13 @@ export function ReportsPage() {
                 <th>Semana</th>
                 <th>Objetivo</th>
                 <th>Real</th>
+                <th>Presupuesto</th>
                 <th>Gasto</th>
-                <th>Conversiones</th>
+                <th>Consultas</th>
+                <th>Cerrados</th>
                 <th>ROI</th>
+                <th>CPA</th>
+                <th>Conversion</th>
               </tr>
             </thead>
             <tbody>
@@ -103,9 +109,13 @@ export function ReportsPage() {
                   <td>{row.semana}</td>
                   <td>{row.objetivo}</td>
                   <td>{row.real}</td>
+                  <td>{row.presupuesto}</td>
                   <td>{row.gasto}</td>
-                  <td>{row.conversiones}</td>
+                  <td>{row.consultas}</td>
+                  <td>{row.alumnosCerrados}</td>
                   <td>{row.roi}</td>
+                  <td>{row.costePorAlumno}</td>
+                  <td>{row.tasaConversion}</td>
                 </tr>
               ))}
             </tbody>
